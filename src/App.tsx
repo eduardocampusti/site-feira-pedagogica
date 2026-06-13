@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route, NavLink, useNavigate } from 'react-router-dom'
-import { supabase } from './lib/supabase'
+import { AuthProvider, useAuth } from './hooks/useAuth'
 import Header from './components/Header'
 import Footer from './components/Footer'
 import ProtectedRoute from './components/ProtectedRoute'
@@ -31,40 +31,81 @@ import AdminEscolaForm from './pages/admin/AdminEscolaForm'
 import AdminGaleria from './pages/admin/AdminGaleria'
 import AdminDepoimentos from './pages/admin/AdminDepoimentos'
 import AdminConfigs from './pages/admin/AdminConfigs'
+import AdminUsuarios from './pages/admin/AdminUsuarios'
 
 function PublicLayout({ children }: { children: React.ReactNode }) {
   return (<><Header />{children}<Footer /></>)
 }
 
-const adminMenu = [
-  { icon: '🏠', label: 'Dashboard',    path: '/admin/dashboard'  },
-  { icon: '📅', label: 'Edições',      path: '/admin/edicoes'    },
-  { icon: '📰', label: 'Notícias',     path: '/admin/noticias'   },
-  { icon: '🛒', label: 'Produtos',     path: '/admin/produtos'   },
-  { icon: '🏫', label: 'Escolas',      path: '/admin/escolas'    },
-  { icon: '🖼️', label: 'Galeria',      path: '/admin/galeria'    },
-  { icon: '💬', label: 'Depoimentos',  path: '/admin/depoimentos'},
-  { icon: '⚙️', label: 'Configurações',path: '/admin/configs'    },
-]
-
 function AdminSidebar() {
+  const { signOut, isAdmin, profile } = useAuth()
   const navigate = useNavigate()
+
   async function logout() {
-    await supabase.auth.signOut()
+    await signOut()
     navigate('/admin/login')
   }
+
+  // Menu base para todos
+  const menuBase = [
+    { icon: '🏠', label: 'Dashboard',    path: '/admin/dashboard'   },
+    { icon: '📅', label: 'Edições',      path: '/admin/edicoes'     },
+    { icon: '📰', label: 'Notícias',     path: '/admin/noticias'    },
+    { icon: '🛒', label: 'Produtos',     path: '/admin/produtos'    },
+    { icon: '🏫', label: 'Escolas',      path: '/admin/escolas'     },
+    { icon: '🖼️', label: 'Galeria',      path: '/admin/galeria'     },
+    { icon: '💬', label: 'Depoimentos',  path: '/admin/depoimentos' },
+  ]
+
+  // Itens exclusivos do admin
+  const menuAdmin = [
+    { icon: '👥', label: 'Usuários',     path: '/admin/usuarios'    },
+    { icon: '⚙️', label: 'Configurações',path: '/admin/configs'     },
+  ]
+
+  const menu = isAdmin ? [...menuBase, ...menuAdmin] : menuBase
+
   return (
     <aside style={{
       width: 240, background: '#163526', color: 'white',
       display: 'flex', flexDirection: 'column',
-      position: 'fixed', top: 0, left: 0, bottom: 0, zIndex: 100,
+      position: 'fixed', top: 0, left: 0, bottom: 0, zIndex: 200,
     }}>
-      <div style={{ padding: '20px 20px 16px', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
-        <img src="/logo-feira.png" alt="Logo" style={{ height: 48, mixBlendMode: 'screen', marginBottom: 6 }} />
-        <p style={{ fontSize: 11, opacity: 0.5, margin: 0 }}>Painel Administrativo</p>
+      {/* Logo */}
+      <div style={{ padding: '20px 20px 14px', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+        <img src="/logo-feira.png" alt="Logo" style={{ height: 44, mixBlendMode: 'screen', marginBottom: 6 }} />
+        <p style={{ fontSize: 10, opacity: 0.5, margin: 0 }}>Painel Administrativo</p>
       </div>
+
+      {/* Badge do perfil */}
+      {profile && (
+        <div style={{ padding: '10px 20px', background: 'rgba(255,255,255,0.06)', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div style={{
+              width: 32, height: 32, borderRadius: '50%',
+              background: profile.perfil === 'admin' ? '#e5a864' : 'rgba(255,255,255,0.2)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: 14, fontWeight: 700,
+              color: profile.perfil === 'admin' ? '#3a1a00' : 'white',
+              flexShrink: 0,
+            }}>
+              {profile.nome?.charAt(0)?.toUpperCase() || '?'}
+            </div>
+            <div style={{ overflow: 'hidden' }}>
+              <p style={{ fontSize: 12, fontWeight: 600, color: 'white', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {profile.nome}
+              </p>
+              <p style={{ fontSize: 10, opacity: 0.55, margin: 0 }}>
+                {profile.perfil === 'admin' ? '👑 Administrador' : '📝 Editor'}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Nav */}
       <nav style={{ flex: 1, padding: '8px 0', overflowY: 'auto' }}>
-        {adminMenu.map(item => (
+        {menu.map(item => (
           <NavLink
             key={item.path}
             to={item.path}
@@ -77,13 +118,15 @@ function AdminSidebar() {
               textDecoration: 'none', transition: 'all 0.15s',
             })}
           >
-            <span style={{ fontSize: 16 }}>{item.icon}</span>
+            <span style={{ fontSize: 15 }}>{item.icon}</span>
             <span>{item.label}</span>
           </NavLink>
         ))}
       </nav>
+
+      {/* Rodapé sidebar */}
       <div style={{ padding: '12px 20px', borderTop: '1px solid rgba(255,255,255,0.1)', display: 'flex', flexDirection: 'column', gap: 8 }}>
-        <NavLink to="/" style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', textDecoration: 'none' }}>
+        <NavLink to="/" style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)', textDecoration: 'none' }}>
           ← Ver site público
         </NavLink>
         <button onClick={logout} style={{
@@ -109,44 +152,61 @@ function AdminLayout({ children }: { children: React.ReactNode }) {
   )
 }
 
+function AdminRoute({ children, adminOnly = false }: { children: React.ReactNode; adminOnly?: boolean }) {
+  const { isAdmin } = useAuth()
+  const navigate = useNavigate()
+  if (adminOnly && !isAdmin) {
+    navigate('/admin/dashboard')
+    return null
+  }
+  return <ProtectedRoute><AdminLayout>{children}</AdminLayout></ProtectedRoute>
+}
+
 export default function App() {
   return (
-    <BrowserRouter>
-      <Routes>
-        {/* Públicas */}
-        <Route path="/" element={<PublicLayout><Home /></PublicLayout>} />
-        <Route path="/sobre" element={<PublicLayout><Sobre /></PublicLayout>} />
-        <Route path="/edicoes" element={<PublicLayout><Edicoes /></PublicLayout>} />
-        <Route path="/edicoes/:id" element={<PublicLayout><EdicaoDetalhe /></PublicLayout>} />
-        <Route path="/noticias" element={<PublicLayout><Noticias /></PublicLayout>} />
-        <Route path="/noticias/:id" element={<PublicLayout><NoticiaDetalhe /></PublicLayout>} />
-        <Route path="/produtos" element={<PublicLayout><Produtos /></PublicLayout>} />
-        <Route path="/galeria" element={<PublicLayout><Galeria /></PublicLayout>} />
-        <Route path="/escolas" element={<PublicLayout><Escolas /></PublicLayout>} />
-        <Route path="/escolas/:id" element={<PublicLayout><EscolaDetalhe /></PublicLayout>} />
-        <Route path="/contato" element={<PublicLayout><Contato /></PublicLayout>} />
+    <AuthProvider>
+      <BrowserRouter>
+        <Routes>
+          {/* ── Públicas ── */}
+          <Route path="/"           element={<PublicLayout><Home /></PublicLayout>} />
+          <Route path="/sobre"      element={<PublicLayout><Sobre /></PublicLayout>} />
+          <Route path="/edicoes"    element={<PublicLayout><Edicoes /></PublicLayout>} />
+          <Route path="/edicoes/:id" element={<PublicLayout><EdicaoDetalhe /></PublicLayout>} />
+          <Route path="/noticias"   element={<PublicLayout><Noticias /></PublicLayout>} />
+          <Route path="/noticias/:id" element={<PublicLayout><NoticiaDetalhe /></PublicLayout>} />
+          <Route path="/produtos"   element={<PublicLayout><Produtos /></PublicLayout>} />
+          <Route path="/galeria"    element={<PublicLayout><Galeria /></PublicLayout>} />
+          <Route path="/escolas"    element={<PublicLayout><Escolas /></PublicLayout>} />
+          <Route path="/escolas/:id" element={<PublicLayout><EscolaDetalhe /></PublicLayout>} />
+          <Route path="/contato"    element={<PublicLayout><Contato /></PublicLayout>} />
 
-        {/* Admin */}
-        <Route path="/admin/login" element={<AdminLogin />} />
-        <Route path="/admin/dashboard"   element={<ProtectedRoute><AdminLayout><AdminDashboard /></AdminLayout></ProtectedRoute>} />
-        <Route path="/admin/noticias"    element={<ProtectedRoute><AdminLayout><AdminNoticias /></AdminLayout></ProtectedRoute>} />
-        <Route path="/admin/noticias/novo" element={<ProtectedRoute><AdminLayout><AdminNoticiaForm /></AdminLayout></ProtectedRoute>} />
-        <Route path="/admin/noticias/:id"  element={<ProtectedRoute><AdminLayout><AdminNoticiaForm /></AdminLayout></ProtectedRoute>} />
-        <Route path="/admin/edicoes"     element={<ProtectedRoute><AdminLayout><AdminEdicoes /></AdminLayout></ProtectedRoute>} />
-        <Route path="/admin/edicoes/novo"  element={<ProtectedRoute><AdminLayout><AdminEdicaoForm /></AdminLayout></ProtectedRoute>} />
-        <Route path="/admin/edicoes/:id"   element={<ProtectedRoute><AdminLayout><AdminEdicaoForm /></AdminLayout></ProtectedRoute>} />
-        <Route path="/admin/produtos"    element={<ProtectedRoute><AdminLayout><AdminProdutos /></AdminLayout></ProtectedRoute>} />
-        <Route path="/admin/produtos/novo" element={<ProtectedRoute><AdminLayout><AdminProdutoForm /></AdminLayout></ProtectedRoute>} />
-        <Route path="/admin/produtos/:id"  element={<ProtectedRoute><AdminLayout><AdminProdutoForm /></AdminLayout></ProtectedRoute>} />
-        <Route path="/admin/escolas"     element={<ProtectedRoute><AdminLayout><AdminEscolas /></AdminLayout></ProtectedRoute>} />
-        <Route path="/admin/escolas/novo"  element={<ProtectedRoute><AdminLayout><AdminEscolaForm /></AdminLayout></ProtectedRoute>} />
-        <Route path="/admin/escolas/:id"   element={<ProtectedRoute><AdminLayout><AdminEscolaForm /></AdminLayout></ProtectedRoute>} />
-        <Route path="/admin/galeria"     element={<ProtectedRoute><AdminLayout><AdminGaleria /></AdminLayout></ProtectedRoute>} />
-        <Route path="/admin/depoimentos" element={<ProtectedRoute><AdminLayout><AdminDepoimentos /></AdminLayout></ProtectedRoute>} />
-        <Route path="/admin/configs"     element={<ProtectedRoute><AdminLayout><AdminConfigs /></AdminLayout></ProtectedRoute>} />
+          {/* ── Admin ── */}
+          <Route path="/admin/login" element={<AdminLogin />} />
 
-        <Route path="*" element={<PublicLayout><div style={{ padding: '80px 0', textAlign: 'center' }}>Página não encontrada</div></PublicLayout>} />
-      </Routes>
-    </BrowserRouter>
+          {/* Rotas de todos (admin + editor) */}
+          <Route path="/admin/dashboard"    element={<AdminRoute><AdminDashboard /></AdminRoute>} />
+          <Route path="/admin/noticias"     element={<AdminRoute><AdminNoticias /></AdminRoute>} />
+          <Route path="/admin/noticias/novo" element={<AdminRoute><AdminNoticiaForm /></AdminRoute>} />
+          <Route path="/admin/noticias/:id"  element={<AdminRoute><AdminNoticiaForm /></AdminRoute>} />
+          <Route path="/admin/edicoes"      element={<AdminRoute><AdminEdicoes /></AdminRoute>} />
+          <Route path="/admin/edicoes/novo"  element={<AdminRoute><AdminEdicaoForm /></AdminRoute>} />
+          <Route path="/admin/edicoes/:id"   element={<AdminRoute><AdminEdicaoForm /></AdminRoute>} />
+          <Route path="/admin/produtos"     element={<AdminRoute><AdminProdutos /></AdminRoute>} />
+          <Route path="/admin/produtos/novo" element={<AdminRoute><AdminProdutoForm /></AdminRoute>} />
+          <Route path="/admin/produtos/:id"  element={<AdminRoute><AdminProdutoForm /></AdminRoute>} />
+          <Route path="/admin/escolas"      element={<AdminRoute><AdminEscolas /></AdminRoute>} />
+          <Route path="/admin/escolas/novo"  element={<AdminRoute><AdminEscolaForm /></AdminRoute>} />
+          <Route path="/admin/escolas/:id"   element={<AdminRoute><AdminEscolaForm /></AdminRoute>} />
+          <Route path="/admin/galeria"      element={<AdminRoute><AdminGaleria /></AdminRoute>} />
+          <Route path="/admin/depoimentos"  element={<AdminRoute><AdminDepoimentos /></AdminRoute>} />
+
+          {/* Rotas exclusivas admin */}
+          <Route path="/admin/usuarios"     element={<AdminRoute adminOnly><AdminUsuarios /></AdminRoute>} />
+          <Route path="/admin/configs"      element={<AdminRoute adminOnly><AdminConfigs /></AdminRoute>} />
+
+          <Route path="*" element={<PublicLayout><div style={{ padding: '80px 0', textAlign: 'center' }}>Página não encontrada</div></PublicLayout>} />
+        </Routes>
+      </BrowserRouter>
+    </AuthProvider>
   )
 }
