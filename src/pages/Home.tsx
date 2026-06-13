@@ -1,44 +1,55 @@
 import { Link } from 'react-router-dom'
+import { useState } from 'react'
 import { useConfigSite } from '../hooks/useConfigSite'
 
 export default function Home() {
   const { config } = useConfigSite()
   const heroImage = config?.imagem_hero || '/hero-banner.png'
+  const [imgCarregada, setImgCarregada] = useState(false)
 
   return (
     <main>
       {/* ── HERO ─────────────────────────────────────────── */}
       <section className="hero-section" aria-label="Apresentação do projeto">
-        {/* Imagem de fundo */}
+        {/* Fundo sólido enquanto imagem carrega — sem pisca-pisca */}
+        <div style={{
+          position: 'absolute', inset: 0, zIndex: 0,
+          background: 'linear-gradient(135deg, #163526 0%, #2d4c3b 60%, #1a4a2e 100%)',
+        }} />
+
+        {/* Imagem de fundo com fade-in suave */}
         <img
           src={heroImage}
           alt=""
           aria-hidden="true"
+          onLoad={() => setImgCarregada(true)}
           style={{
             position: 'absolute', inset: 0,
             width: '100%', height: '100%',
             objectFit: 'cover', objectPosition: 'center',
-            zIndex: 0,
+            zIndex: 1,
+            opacity: imgCarregada ? 1 : 0,
+            transition: 'opacity 0.6s ease',
           }}
           loading="eager"
           fetchPriority="high"
         />
-        {/* Overlay */}
+        {/* Overlay — acima da imagem */}
         <div aria-hidden="true" style={{
           position: 'absolute', inset: 0,
           background: 'linear-gradient(to bottom, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0.35) 50%, transparent 100%)',
-          zIndex: 1,
+          zIndex: 2,
         }} />
         {/* Fade base */}
         <div aria-hidden="true" style={{
           position: 'absolute', bottom: 0, left: 0, right: 0,
           height: 'clamp(80px, 15vw, 180px)',
           background: 'linear-gradient(to top, #fdf9ef, transparent)',
-          zIndex: 2,
+          zIndex: 3,
         }} />
 
-        {/* Conteúdo */}
-        <div className="hero-content">
+        {/* Conteúdo — sempre acima de tudo */}
+        <div className="hero-content" style={{ position: 'relative', zIndex: 4 }}>
           <span aria-label="Edição 2024" style={{
             display: 'inline-block',
             background: '#e5a864', color: '#3a1a00',
