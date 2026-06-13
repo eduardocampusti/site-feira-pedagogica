@@ -1,7 +1,7 @@
-# Variáveis de ambiente — NUNCA commitar
+# Variáveis de ambiente locais — NUNCA commitar
 .env
 .env.local
-.env.production
+# .env.production é commitado para deploy na Hostinger
 
 # Logs
 logs
